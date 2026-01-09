@@ -1,10 +1,29 @@
 # Arduino_robot_arm
 # Servo Memory Controller (Arduino / Tinkercad)
 
+This repository contains a beginner-friendly, progressive implementation of a robotic arm controller based on the **Arduino Robotic Arm** concept originally shared by **MilesPeterson101** on Arduino Project Hub:
+
+🔗 https://projecthub.arduino.cc/milespeterson101/arduino-robotic-arm-8b8601
+
+👉 **Live Tinkercad project:**  
+https://www.tinkercad.com/things/dZCJIFebCS4-arduinorobotarm
+
+You can open the link to:
+- view the full circuit
+- inspect wiring
+- run the simulation ]
+
 This project is a beginner Arduino project that controls 3 servo motors using:
 - potentiometers (manual control)
 - buttons (save & play)
 - LEDs (visual feedback)
+
+## 📐 Circuit Diagrams
+
+### Circuit View (Tinkercad)
+This view shows the full breadboard-based wiring used in the simulation.
+
+![Tinkercad Circuit View](docs/circuit_view.png)
 
 The code is developed step by step and tested in Tinkercad.
 
