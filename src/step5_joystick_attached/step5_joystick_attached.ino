@@ -1,5 +1,7 @@
 // Original code by Ryan Chan. Updated code by MilesPeterson101
-// Modified: Joystick (A0/A1) + SW on D11 + fixed button handling + proper save/play behavior
+// Revised: Joystick controls servo1 + (servo2 OR servo3). SW toggles which one.
+// Save positions with button1 (D12), play cycle with button2 (D13).
+// Joystick: VRx->A0, VRy->A1, SW->D11 (INPUT_PULLUP). Optional pot3->A2.
 
 #include <Servo.h>
 
@@ -13,15 +15,15 @@ const int LED3 = 4;
 const int LED4 = 7;
 const int LED5 = 8;
 
-const int button1 = 12; // Save position (right button)
-const int button2 = 13; // Start playback (left button)
+const int button1 = 12; // Save position
+const int button2 = 13; // Start playback
 
 // Joystick
 const int joyX = A0;   // VRx
 const int joyY = A1;   // VRy
-const int joySW = 11;  // SW (press = LOW when using INPUT_PULLUP)
+const int joySW = 11;  // SW (pressed = LOW with INPUT_PULLUP)
 
-// Keep pot3 for servo3
+// Optional pot for servo3 (used only in Mode 0)
 const int pot3 = A2;
 
 // Saved positions (5 max)
@@ -29,22 +31,26 @@ int servo1PosSaves[] = {1, 1, 1, 1, 1};
 int servo2PosSaves[] = {1, 1, 1, 1, 1};
 int servo3PosSaves[] = {1, 1, 1, 1, 1};
 
-// Angles we actually command
+// Angles
 int s1 = 90;
 int s2 = 90;
 int s3 = 90;
 
-// Save/play state
+// State
 int button1Presses = 0;     // 0..5
 bool playbackEnabled = false;
-bool joystickEnabled = true; // toggled by SW
 
-// Tuning for joystick direction control
-const int DEADZONE = 80;  // ignore noise around center
-const int STEP = 2;       // degrees per loop when joystick pushed
+// Mode: which servo the joystick Y axis controls
+int joyMode = 0;
+// 0: Y -> servo2, servo3 comes from pot3
+// 1: Y -> servo3, servo2 stays where it is
+
+// Joystick tuning
+const int DEADZONE = 80;
+const int STEP = 2;
 const int LOOP_DELAY = 20;
 
-// Simple debounce + edge detect
+// Debounce + edge detect
 int lastB1 = LOW;
 int lastB2 = LOW;
 int lastSW = HIGH; // INPUT_PULLUP idle = HIGH
@@ -70,49 +76,51 @@ void setup() {
   pinMode(LED4, OUTPUT);
   pinMode(LED5, OUTPUT);
 
-  // If your buttons are wired with external pulldown resistors, keep INPUT.
-  // If your buttons are wired to GND when pressed (recommended), switch to INPUT_PULLUP and invert logic.
+  // Keep these as INPUT if you are using external pulldown resistors.
+  // If your buttons are wired to GND when pressed, change to INPUT_PULLUP and invert logic.
   pinMode(button1, INPUT);
   pinMode(button2, INPUT);
 
-  // Joystick switch: connect SW to D11 and other side to GND
   pinMode(joySW, INPUT_PULLUP);
 
   Serial.begin(9600);
 
-  // Start centered
   servo1.write(s1);
   servo2.write(s2);
-
-  // Servo3 from pot
-  int pot3Val = analogRead(pot3);
-  s3 = map(pot3Val, 0, 1023, 0, 179);
   servo3.write(s3);
 
   setLEDs(0);
-  Serial.println("Ready: Save with D12, Play with D13, Toggle joystick with SW(D11).");
+  Serial.println("Ready:");
+  Serial.println("- Save: D12");
+  Serial.println("- Play: D13");
+  Serial.println("- SW(D11) toggles mode: Y->servo2 <-> Y->servo3");
 }
 
 void loop() {
-  // --- Read servo3 pot always ---
-  int pot3Val = analogRead(pot3);
-  s3 = map(pot3Val, 0, 1023, 0, 179);
-  servo3.write(s3);
-
-  // --- Joystick SW toggles joystick control ON/OFF ---
-  int swNow = digitalRead(joySW); // HIGH idle, LOW pressed
+  // ---------- SW toggles joyMode ----------
+  int swNow = digitalRead(joySW);         // HIGH idle, LOW pressed
   bool swPressed = (swNow == LOW && lastSW == HIGH);
+
   if (swPressed && (millis() - lastDebounceTime > DEBOUNCE_MS)) {
-    joystickEnabled = !joystickEnabled;
+    joyMode = 1 - joyMode;               // toggle 0 <-> 1
     lastDebounceTime = millis();
 
-    Serial.print("Joystick control: ");
-    Serial.println(joystickEnabled ? "ON" : "OFF");
+    Serial.print("Mode: ");
+    Serial.println(joyMode == 0 ? "Y->servo2 (servo3 from pot3)" : "Y->servo3 (servo2 fixed)");
   }
   lastSW = swNow;
 
-  // --- If joystick control enabled, update servo1 & servo2 by direction ---
-  if (joystickEnabled && !playbackEnabled) {
+  // ---------- If not playing, allow live control ----------
+  if (!playbackEnabled) {
+    // Optional: in Mode 0, servo3 follows pot3
+    if (joyMode == 0) {
+      int pot3Val = analogRead(pot3);
+      s3 = map(pot3Val, 0, 1023, 0, 179);
+      s3 = constrain(s3, 0, 179);
+      servo3.write(s3);
+    }
+
+    // Read joystick
     int x = analogRead(joyX);
     int y = analogRead(joyY);
 
@@ -122,22 +130,28 @@ void loop() {
     if (abs(dx) < DEADZONE) dx = 0;
     if (abs(dy) < DEADZONE) dy = 0;
 
-    // X -> servo1
+    // X always controls servo1
     if (dx > 0) s1 += STEP;
     else if (dx < 0) s1 -= STEP;
 
-    // Y -> servo2 (invert if it feels backward)
-    if (dy > 0) s2 += STEP;
-    else if (dy < 0) s2 -= STEP;
+    // Y controls servo2 or servo3 depending on mode
+    if (joyMode == 0) {
+      if (dy > 0) s2 += STEP;
+      else if (dy < 0) s2 -= STEP;
+      s2 = constrain(s2, 0, 179);
+      servo2.write(s2);
+    } else {
+      if (dy > 0) s3 += STEP;
+      else if (dy < 0) s3 -= STEP;
+      s3 = constrain(s3, 0, 179);
+      servo3.write(s3);
+    }
 
     s1 = constrain(s1, 0, 179);
-    s2 = constrain(s2, 0, 179);
-
     servo1.write(s1);
-    servo2.write(s2);
   }
 
-  // --- Read buttons with edge detection (prevents multiple triggers while held) ---
+  // ---------- Buttons edge detect ----------
   int b1Now = digitalRead(button1);
   int b2Now = digitalRead(button2);
 
@@ -147,7 +161,7 @@ void loop() {
   lastB1 = b1Now;
   lastB2 = b2Now;
 
-  // --- Save position (button1) ---
+  // ---------- Save position ----------
   if (b1Pressed && (millis() - lastDebounceTime > DEBOUNCE_MS)) {
     lastDebounceTime = millis();
 
@@ -167,7 +181,7 @@ void loop() {
     }
   }
 
-  // --- Start playback (button2) ---
+  // ---------- Start playback ----------
   if (b2Pressed && (millis() - lastDebounceTime > DEBOUNCE_MS)) {
     lastDebounceTime = millis();
 
@@ -179,21 +193,14 @@ void loop() {
     }
   }
 
-  // --- Playback loop: move positions 1..5 repeatedly forever ---
+  // ---------- Playback loop (forever) ----------
   if (playbackEnabled) {
     for (int i = 0; i < 5; i++) {
       servo1.write(servo1PosSaves[i]);
       servo2.write(servo2PosSaves[i]);
       servo3.write(servo3PosSaves[i]);
-
-      Serial.println("Saved Angles:");
-      Serial.println(servo1PosSaves[i]);
-      Serial.println(servo2PosSaves[i]);
-      Serial.println(servo3PosSaves[i]);
-
       delay(1050);
     }
-    // repeats forever because playbackEnabled stays true and loop() repeats
   }
 
   delay(LOOP_DELAY);
