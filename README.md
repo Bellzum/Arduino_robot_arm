@@ -74,12 +74,12 @@ The code is developed step by step and tested in Tinkercad.
 - `step5_joystick_attached.ino`→ replace the two potentiometers with a joystick
 
 ## Final results 
-![Robot Arm](docs/roarm1.jpeg)
+![Robot Arm](docs/robotarm.png)
 
 ## 🎥 Demo Videos
-- [Video 1 – Manual Control](docs/video1.mp4)
 
-- [Video 2 – Playback Mode](docs/video2.mp4)
+- [▶ Demo 1](docs/video1.mp4)
+- [▶ Demo 2](docs/video2.mp4)
 
 ## Simulation
 Tested using **Tinkercad Circuits**.
