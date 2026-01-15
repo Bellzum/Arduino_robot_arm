@@ -38,18 +38,18 @@ The code is developed step by step and tested in Tinkercad.
 ## Pin Mapping
 
 ### Servos
-| Servo | Pin |
-|-----|-----|
+| Servo   | Pin |
+|-----    |-----|
 | Servo 1 | D5 |
 | Servo 2 | D6 |
 | Servo 3 | D9 |
 
 ### Potentiometers
-| Pot | Pin |
-|---|---|
-| Pot 1 | A0 |
-| Pot 2 | A1 |
-| Pot 3 | A2 |
+| Pot   | Pin |
+|---    |---  |
+| Pot 1 | A0  |
+| Pot 2 | A1  |
+| Pot 3 | A2  |
 
 ### Buttons
 | Button | Pin |
@@ -71,7 +71,14 @@ The code is developed step by step and tested in Tinkercad.
 - `step2_servo_led_test.ino` → servo + LED
 - `step3_button_test.ino` → button input test
 - `step4_full_memory_controller.ino` → full system
+- `step5_joystick_attached.ino`→ replace the two potentiometers with a joystick
 
+## Final results 
+(docs/roarm1.jpeg)
+
+(docs/video1.mp4)
+
+(docs/video2.mp4)
 ## Simulation
 Tested using **Tinkercad Circuits**.
 https://www.tinkercad.com/things/dZCJIFebCS4-arduinorobotarm
