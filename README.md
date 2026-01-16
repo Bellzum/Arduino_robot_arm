@@ -38,6 +38,7 @@ The code is developed step by step and tested in Tinkercad.
 - 2x Push buttons  
 - 5x LEDs + resistors  
 - Breadboard & jumper wires  
+- 1x Joystick (optional)
 
 ---
 
